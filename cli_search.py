@@ -1,9 +1,20 @@
+# /// script
+# requires-python = ">=3.9"
+# dependencies = [
+#     "faiss",
+# ]
+# ///
 import os
 import faiss 
 import pandas as pd
 import numpy as np
 
-from openai.embeddings_utils import get_embedding
+from openai import OpenAI
+client = OpenAI(api_key=os.environ['OPENAI_API_KEY'])
+
+def get_embedding(text, model="text-embedding-ada-002"):
+   text = text.replace("\n", " ")
+   return client.embeddings.create(input = [text], model=model).data[0].embedding
 
 index_path = "res/index.bin"
 info_path = "res/combined.csv"
@@ -20,16 +31,18 @@ def init():
     return df, index
 
 
-def search_index(index, query, k=5):
-    query_emb = get_embedding(query, engine="text-embedding-ada-002")
+def search_index(index, query, k=50):
+    query_emb = get_embedding(query)
+    # df['ada_embedding'] = df.combined.apply(lambda x: get_embedding(x, model='text-embedding-ada-002'))
     query_emb = np.array(query_emb).reshape(1, -1)
     D, I = index.search(query_emb, k)
     return D, I
 
 
 def main():
-    df, index = init()    
+    df, index = init()
     while True:
+        print("\n" * 50)
         query = input("Enter a query: ")
         if query == "exit":
             break
